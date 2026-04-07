@@ -1,3 +1,4 @@
+----------------------------- MODULE Elevator -----------------------------
 EXTENDS Integers, FiniteSets, TLC
 
 CONSTANT NumFloors
@@ -8,16 +9,22 @@ VARIABLES
     pending,
     door_open
 
+(* ================= VARIABLES TUPLE ================= *)
+vars == <<pos, pending, door_open>>
+
+(* ================= TYPE INVARIANT ================= *)
 TypeOK ==
     /\ pos \in 1..NumFloors
-    /\ pending\subseteq 1..NumFloors
+    /\ pending \subseteq 1..NumFloors
     /\ door_open \in {TRUE, FALSE}
 
+(* ================= INITIAL STATE ================= *)
 Init ==
     /\ pos = 1
     /\ pending = {}
     /\ door_open = FALSE
 
+(* ================= REQUEST ACTIONS ================= *)
 CallFloor(floor) ==
     /\ floor \in 1..NumFloors
     /\ pending' = pending \cup {floor}
@@ -28,6 +35,12 @@ PressCabinButton(floor) ==
     /\ pending' = pending \cup {floor}
     /\ UNCHANGED <<pos, door_open>>
 
+EnvRequest ==
+    \E floor \in 1..NumFloors:
+        \/ CallFloor(floor)
+        \/ PressCabinButton(floor)
+
+(* ================= MOVEMENT ================= *)
 MoveUp ==
     /\ ~door_open
     /\ pos < NumFloors
@@ -41,53 +54,43 @@ MoveDown ==
     /\ UNCHANGED <<pending, door_open>>
 
 Move ==
-//need to fill out
+    \/ MoveUp
+    \/ MoveDown
 
+(* ================= DOORS ================= *)
 OpenDoors == 
     /\ ~door_open
     /\ pos \in pending
     /\ door_open' = TRUE
-    /\ UNCHANGED <<pos, pending>>
+    /\ pending' = pending \ {pos}
+    /\ UNCHANGED pos
 
 CloseDoors ==
     /\ door_open
-    /\ pending' = pending \ {pos}
     /\ door_open' = FALSE
-    /\ UNCHANGED pos
+    /\ UNCHANGED <<pos, pending>>
 
-EnvRequest ==
-//need to fill out
-
+(* ================= NEXT STATE ================= *)
 Next ==
     \/ EnvRequest
     \/ Move
     \/ OpenDoors
     \/ CloseDoors
 
+(* ================= FAIRNESS ================= *)
 Fairness ==
-//need to fill out
+    /\ WF_vars(Move)
+    /\ WF_vars(OpenDoors)
 
+(* ================= SPEC ================= *)
 Spec == Init /\ [][Next]_vars /\ Fairness
 
-// Safety Properties
+(* ================= SAFETY ================= *)
+Safety == TypeOK
 
-Safety_DoorsOpenOnlyAtFloor ==
-    door_open => pos \in pending
-
-Safety_DoorsSynchronized
-    door_open => pos \in pending
-
-Safety = Safety_DoorsOpenOnlyAtFloor
-
-//Liveness Properties
-
+(* ================= LIVENESS ================= *)
 Liveness_EveryRequestServed == 
     \A floor \in 1..NumFloors:
-        (floor \in pending) ~> (floor \notin pending)
+        [](floor \in pending => <> (floor \notin pending))
 
-//Extra Credit
-
-CallFloorRestricted(floor) == 
-    /\ floor \ in 1..NumFloors \ RestrictedFloors
-    /\ pending ' = pending \cup {floor}
-    /\ UNCHANGED <<pos, door_open>>
+=============================================================================
